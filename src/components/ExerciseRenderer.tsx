@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Volume2, Check, X, Mic } from 'lucide-react';
+import { Play, Volume2, Check, X, Mic, Clock, Target, BookOpen, Award, ChevronRight } from 'lucide-react';
 import type { SkillType } from '../types';
 
 interface ExerciseRendererProps {
@@ -91,26 +91,71 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
     const questions = exercise.content?.exercise_content?.questions;
     
     return (
-      <div className="space-y-6">
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">תרגיל דקדוק</h3>
-          <div className="text-gray-800 leading-relaxed whitespace-pre-line">
-            {text}
+      <div className="space-y-8">
+        {/* Header Card */}
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-reverse space-x-4">
+              <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <BookOpen className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-indigo-900 mb-1">תרגיל דקדוק</h3>
+                <p className="text-indigo-600">השלמת מאמרים בצרפתית</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-reverse space-x-3">
+              <div className="flex items-center space-x-reverse space-x-2 bg-white/70 px-3 py-2 rounded-lg">
+                <Clock className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-medium text-indigo-700">5-10 דקות</span>
+              </div>
+              <div className="flex items-center space-x-reverse space-x-2 bg-white/70 px-3 py-2 rounded-lg">
+                <Target className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-medium text-indigo-700">{questions?.length || 0} שאלות</span>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 border border-white/50 shadow-sm">
+            <div className="text-gray-800 leading-relaxed whitespace-pre-line text-lg">
+              {text}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">השלמו את המשפטים</h3>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-reverse space-x-3 mb-6">
+            <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">?</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900">השלמו את המשפטים</h3>
+          </div>
           {questions && questions.map((questionObj: any, index: number) => {
             const options = ['le', 'la', "l'", 'les', 'un', 'une', 'des']; // Extended options
             const questionKey = String(index + 1);
             return (
-              <div key={index} className="bg-white p-4 border border-gray-200 rounded-lg">
-                <p className="font-medium mb-2 text-blue-600">{questionObj.question_in_Hebrew}</p>
-                <p className="font-medium mb-3">{questionObj.sentence}</p>
-                <div className="space-y-2">
+              <div key={index} className="bg-white border-2 border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-purple-200">
+                <div className="flex items-start space-x-reverse space-x-4 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-white font-bold text-sm">{index + 1}</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-lg font-semibold text-purple-700 mb-2">{questionObj.question_in_Hebrew}</p>
+                    <p className="text-xl font-medium text-gray-800 mb-4 bg-gray-50 p-4 rounded-xl border-r-4 border-purple-400" dir="ltr">{questionObj.sentence}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {options.map((option: string, optIndex: number) => (
-                    <label key={optIndex} className="flex items-center space-x-2 cursor-pointer">
+                    <label key={optIndex} className={`
+                      flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 font-medium
+                      ${showResults && correctAnswers?.[questionKey] === option 
+                        ? 'bg-green-100 border-green-400 text-green-800 shadow-md' 
+                        : showResults && userAnswers[`completion${index}`] === option && correctAnswers?.[questionKey] !== option
+                        ? 'bg-red-100 border-red-400 text-red-800 shadow-md'
+                        : userAnswers[`completion${index}`] === option
+                        ? 'bg-purple-100 border-purple-400 text-purple-800 shadow-md'
+                        : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700'
+                      }
+                    `}>
                       <input
                         type="radio"
                         name={`completion${index}`}
@@ -120,18 +165,26 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
                           [`completion${index}`]: e.target.value
                         }))}
                         disabled={showResults}
-                        className="text-blue-600"
+                        className="sr-only"
                       />
-                      <span className={showResults && correctAnswers?.[questionKey] === option ? 'text-green-600 font-medium' : ''}>{option}</span>
-                      {showResults && correctAnswers?.[questionKey] === option && <Check className="w-4 h-4 text-green-600" />}
-                      {showResults && userAnswers[`completion${index}`] === option && correctAnswers?.[questionKey] !== option && <X className="w-4 h-4 text-red-600" />}
+                      <span className="text-lg font-bold" dir="ltr">{option}</span>
+                      {showResults && correctAnswers?.[questionKey] === option && (
+                        <Check className="w-5 h-5 text-green-600 mr-2" />
+                      )}
+                      {showResults && userAnswers[`completion${index}`] === option && correctAnswers?.[questionKey] !== option && (
+                        <X className="w-5 h-5 text-red-600 mr-2" />
+                      )}
                     </label>
                   ))}
                 </div>
                 {showResults && (
-                  <p className="mt-2 text-sm text-green-600">
-                    תשובה נכונה: {correctAnswers?.[questionKey]}
-                  </p>
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+                    <div className="flex items-center space-x-reverse space-x-2">
+                      <Award className="w-5 h-5 text-green-600" />
+                      <span className="font-semibold text-green-800">תשובה נכונה:</span>
+                      <span className="font-bold text-green-700 text-lg" dir="ltr">{correctAnswers?.[questionKey]}</span>
+                    </div>
+                  </div>
                 )}
               </div>
             );
@@ -165,30 +218,73 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
     }
     
     return (
-      <div className="space-y-6">
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Texte à lire</h3>
-          {text ? (
-            <p className="text-gray-800 leading-relaxed">{text}</p>
-          ) : (
-            <div>
-              <p className="text-red-500">טקסט לא נמצא - מבנה תרגיל לא מזוהה</p>
-              <pre className="text-xs bg-gray-100 p-2 mt-2 overflow-auto">{JSON.stringify(exercise, null, 2)}</pre>
+      <div className="space-y-8">
+        {/* Header Card */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-reverse space-x-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <BookOpen className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-blue-900 mb-1">תרגיל קריאה</h3>
+                <p className="text-blue-600">הבנת הנקרא בצרפתית</p>
+              </div>
             </div>
-          )}
+            <div className="flex items-center space-x-reverse space-x-3">
+              <div className="flex items-center space-x-reverse space-x-2 bg-white/70 px-3 py-2 rounded-lg">
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">5-10 דקות</span>
+              </div>
+              <div className="flex items-center space-x-reverse space-x-2 bg-white/70 px-3 py-2 rounded-lg">
+                <Target className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">{questions?.length || 0} שאלות</span>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 border border-white/50 shadow-sm">
+            {text ? (
+              <div className="text-gray-800 leading-relaxed text-lg" dir="ltr">{text}</div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <X className="w-8 h-8 text-red-500" />
+                </div>
+                <p className="text-red-600 font-medium">טקסט לא נמצא - מבנה תרגיל לא מזוהה</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Questions</h3>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-reverse space-x-3 mb-6">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">?</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900">שאלות הבנה</h3>
+          </div>
           {questions && Array.isArray(questions) && questions.length > 0 ? (
             questions.map((question: any, index: number) => (
-              <div key={index} className="bg-white p-4 border border-gray-200 rounded-lg">
-                <p className="font-medium mb-3">{question.question}</p>
-                <div className="space-y-2">
+              <div key={index} className="bg-white border-2 border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-blue-200">
+                <div className="flex items-start space-x-reverse space-x-4 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-white font-bold text-sm">{index + 1}</span>
+                  </div>
+                  <p className="text-lg font-semibold text-gray-800 flex-1">{question.question}</p>
+                </div>
+                <div className="space-y-3 mr-12">
                   {question.type === 'true_false' ? (
                     // True/False question
-                    <>
-                      <label className="flex items-center space-x-2 cursor-pointer">
+                    <div className="grid grid-cols-2 gap-4">
+                      <label className={`
+                        flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 font-medium
+                        ${showResults && question.correct === true 
+                          ? 'bg-green-100 border-green-400 text-green-800 shadow-md' 
+                          : userAnswers[`q${index}`] === true
+                          ? 'bg-blue-100 border-blue-400 text-blue-800 shadow-md'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                        }
+                      `}>
                         <input
                           type="radio"
                           name={`q${index}`}
@@ -198,12 +294,22 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
                             [`q${index}`]: e.target.value === 'true'
                           }))}
                           disabled={showResults}
-                          className="text-blue-600"
+                          className="sr-only"
                         />
-                        <span className={showResults && question.correct === true ? 'text-green-600 font-medium' : ''}>נכון</span>
-                        {showResults && question.correct === true && <Check className="w-4 h-4 text-green-600" />}
+                        <span className="text-lg">✓ נכון</span>
+                        {showResults && question.correct === true && (
+                          <Check className="w-5 h-5 text-green-600 mr-2" />
+                        )}
                       </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
+                      <label className={`
+                        flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 font-medium
+                        ${showResults && question.correct === false 
+                          ? 'bg-green-100 border-green-400 text-green-800 shadow-md' 
+                          : userAnswers[`q${index}`] === false
+                          ? 'bg-blue-100 border-blue-400 text-blue-800 shadow-md'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                        }
+                      `}>
                         <input
                           type="radio"
                           name={`q${index}`}
@@ -213,41 +319,74 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
                             [`q${index}`]: e.target.value === 'true'
                           }))}
                           disabled={showResults}
-                          className="text-blue-600"
+                          className="sr-only"
                         />
-                        <span className={showResults && question.correct === false ? 'text-green-600 font-medium' : ''}>לא נכון</span>
-                        {showResults && question.correct === false && <Check className="w-4 h-4 text-green-600" />}
+                        <span className="text-lg">✗ לא נכון</span>
+                        {showResults && question.correct === false && (
+                          <Check className="w-5 h-5 text-green-600 mr-2" />
+                        )}
                       </label>
-                    </>
+                    </div>
                   ) : (
                     // Multiple choice question
-                    question.options && Array.isArray(question.options) ? question.options.map((option: string, optIndex: number) => (
-                      <label key={optIndex} className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name={`q${index}`}
-                          value={optIndex}
-                          onChange={(e) => setUserAnswers(prev => ({
-                            ...prev,
-                            [`q${index}`]: parseInt(e.target.value)
-                          }))}
-                          disabled={showResults}
-                          className="text-blue-600"
-                        />
-                        <span className={showResults && question.correct === optIndex ? 'text-green-600 font-medium' : ''}>{option}</span>
-                        {showResults && question.correct === optIndex && <Check className="w-4 h-4 text-green-600" />}
-                        {showResults && userAnswers[`q${index}`] === optIndex && question.correct !== optIndex && <X className="w-4 h-4 text-red-600" />}
-                      </label>
-                    )) : <p className="text-red-500">אפשרויות שאלה לא נמצאו</p>
+                    question.options && Array.isArray(question.options) ? (
+                      <div className="space-y-3">
+                        {question.options.map((option: string, optIndex: number) => (
+                          <label key={optIndex} className={`
+                            flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 font-medium
+                            ${showResults && question.correct === optIndex 
+                              ? 'bg-green-100 border-green-400 text-green-800 shadow-md' 
+                              : showResults && userAnswers[`q${index}`] === optIndex && question.correct !== optIndex
+                              ? 'bg-red-100 border-red-400 text-red-800 shadow-md'
+                              : userAnswers[`q${index}`] === optIndex
+                              ? 'bg-blue-100 border-blue-400 text-blue-800 shadow-md'
+                              : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                            }
+                          `}>
+                            <input
+                              type="radio"
+                              name={`q${index}`}
+                              value={optIndex}
+                              onChange={(e) => setUserAnswers(prev => ({
+                                ...prev,
+                                [`q${index}`]: parseInt(e.target.value)
+                              }))}
+                              disabled={showResults}
+                              className="sr-only"
+                            />
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-lg">{option}</span>
+                              <div className="flex items-center space-x-reverse space-x-2">
+                                {showResults && question.correct === optIndex && (
+                                  <Check className="w-5 h-5 text-green-600" />
+                                )}
+                                {showResults && userAnswers[`q${index}`] === optIndex && question.correct !== optIndex && (
+                                  <X className="w-5 h-5 text-red-600" />
+                                )}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <X className="w-8 h-8 text-red-500" />
+                        </div>
+                        <p className="text-red-600 font-medium">אפשרויות שאלה לא נמצאו</p>
+                      </div>
+                    )
                   )}
                 </div>
               </div>
             ))
           ) : (
-            <div>
-              <p className="text-red-500">שאלות לא נמצאו - מבנה תרגיל לא מזוהה</p>
-              <p className="text-sm text-gray-600 mt-2">מבנה התרגיל הנוכחי:</p>
-              <pre className="text-xs bg-gray-100 p-2 mt-2 overflow-auto max-h-40">{JSON.stringify(exercise, null, 2)}</pre>
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <X className="w-10 h-10 text-red-500" />
+              </div>
+              <h4 className="text-xl font-semibold text-red-600 mb-2">שאלות לא נמצאו</h4>
+              <p className="text-gray-600">מבנה התרגיל לא מזוהה - אנא נסה ליצור תרגיל חדש</p>
             </div>
           )}
         </div>
@@ -483,31 +622,60 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="max-w-5xl mx-auto">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-6">
+          <div className="flex items-center justify-between text-white">
+            <div className="flex items-center space-x-reverse space-x-4">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">תרגיל דינמי</h1>
+                <p className="text-purple-100">נוצר במיוחד עבורך</p>
+              </div>
+            </div>
+            <div className="text-4xl">🤖</div>
+          </div>
+        </div>
+        <div className="p-8">
         {renderExercise()}
         
         {!showResults && (
           <div className="mt-8 flex justify-center">
             <button
               onClick={handleSubmit}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
             >
-              Valider mes réponses
+              <div className="flex items-center space-x-reverse space-x-3">
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
+                <span>בדוק את התשובות שלי</span>
+              </div>
             </button>
           </div>
         )}
         
         {showResults && (
-          <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h3 className="text-lg font-semibold text-green-800 mb-2">
-              Exercice terminé!
-            </h3>
-            <p className="text-green-700">
-              Score: {Math.round(calculateScore())}%
-            </p>
+          <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-8 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-reverse space-x-4">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                  <Award className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-green-800 mb-1">
+                    כל הכבוד! התרגיל הושלם
+                  </h3>
+                  <p className="text-green-700 text-lg">
+                    הציון שלך: <span className="font-bold text-2xl">{Math.round(calculateScore())}%</span>
+                  </p>
+                </div>
+              </div>
+              <div className="text-6xl">🎉</div>
+            </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
