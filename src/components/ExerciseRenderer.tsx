@@ -622,8 +622,8 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+    <div className="w-full">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
         <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-6">
           <div className="flex items-center justify-between text-white">
             <div className="flex items-center space-x-reverse space-x-4">
@@ -638,7 +638,7 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
             <div className="text-4xl">🤖</div>
           </div>
         </div>
-        <div className="p-8">
+        <div className="p-6 md:p-8">
         {renderExercise()}
         
         {!showResults && (
