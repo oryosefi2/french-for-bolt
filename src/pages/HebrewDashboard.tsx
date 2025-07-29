@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import Sidebar from '../components/Sidebar';
 import Dashboard from './Dashboard';
@@ -8,10 +8,31 @@ import WritingPage from './WritingPage';
 import SpeakingPage from './SpeakingPage';
 import VocabularyPage from './VocabularyPage';
 import GrammarPage from './GrammarPage';
+import ExercisePage from './ExercisePage';
 
 const HebrewDashboard: React.FC = () => {
   const { user, signOut, initialLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
+
+  // Listen for hash changes to handle navigation to exercise pages
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/exercise/')) {
+        setCurrentPage('exercise');
+      }
+    };
+
+    // Check initial hash
+    handleHashChange();
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
 
   if (initialLoading) {
     return (
@@ -50,6 +71,8 @@ const HebrewDashboard: React.FC = () => {
         return <VocabularyPage />;
       case 'grammar':
         return <GrammarPage />;
+      case 'exercise':
+        return <ExercisePage />;
       default:
         return <Dashboard />;
     }
@@ -116,7 +139,8 @@ const getCurrentPageTitle = (page: string): string => {
     writing: 'תרגילי כתיבה',
     speaking: 'תרגילי דיבור',
     vocabulary: 'אוצר מילים',
-    grammar: 'דקדוק'
+    grammar: 'דקדוק',
+    exercise: 'תרגיל דינמי'
   };
   return titles[page as keyof typeof titles] || 'דשבורד ראשי';
 };
