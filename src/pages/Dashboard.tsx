@@ -4,13 +4,16 @@ import { useProgress } from '../hooks/useProgress';
 import LevelSelector from '../components/LevelSelector';
 import SkillCard from '../components/SkillCard';
 import ProgressChart from '../components/ProgressChart';
+import AdvancedExerciseOptions from '../components/AdvancedExerciseOptions';
 import { Calendar, Target, Clock, Award } from 'lucide-react';
 import type { CEFRLevel, SkillType } from '../types';
+import toast from 'react-hot-toast';
 
 const Dashboard: React.FC = () => {
   const { user, updateUserLevel } = useAuth();
   const { progress, getAverageScore, getTotalTimeSpent, getStreakDays } = useProgress(user?.id);
   const [selectedLevel, setSelectedLevel] = useState<CEFRLevel>(user?.current_level || 'A1');
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   const skills: { type: SkillType; title: string; description: string }[] = [
     { type: 'reading', title: 'קריאה', description: 'הבנת הנקרא' },
@@ -29,6 +32,99 @@ const Dashboard: React.FC = () => {
   const getSkillProgress = (skillType: SkillType) => {
     const skillProgress = progress.filter(p => p.skill_type === skillType && p.level === selectedLevel);
     return skillProgress.length > 0 ? getAverageScore(skillType) : 0;
+  };
+
+  // Helper function to map our skill types to backend categories
+  const mapSkillToCategory = (skill: SkillType): string => {
+    const mapping = {
+      reading: 'comprehension_ecrite',
+      listening: 'comprehension_orale',
+      writing: 'production_ecrite',
+      speaking: 'production_orale',
+      vocabulary: 'vocabulaire',
+      grammar: 'grammaire'
+    };
+    return mapping[skill] || 'comprehension_ecrite';
+  };
+
+  // Helper function to get template type based on skill
+  const getTemplateType = (skill: SkillType): string => {
+    const templates = {
+      reading: 'reading_comprehension',
+      listening: 'listening_comprehension',
+      writing: 'writing_exercise',
+      speaking: 'speaking_exercise',
+      vocabulary: 'vocabulary_exercise',
+      grammar: 'grammar_exercise'
+    };
+    return templates[skill] || 'reading_comprehension';
+  };
+
+  const handleCreateExercise = () => {
+    setShowAdvancedOptions(true);
+  };
+
+  const handleExerciseSubmit = async (options: {
+    skills: SkillType[];
+    difficulty: number;
+    level: CEFRLevel;
+    topics: string[];
+    prompt: string;
+  }) => {
+    try {
+      console.log('🎯 יוצר תרגיל דינמי עם אפשרויות מתקדמות...', options);
+      toast.loading('יוצר תרגיל מותאם אישית...', { id: 'creating-exercise' });
+      
+      // שליחה לבקשה לשרת
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/generate-exercise`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user?.id,
+          level: options.level,
+          skill_category: mapSkillToCategory(options.skills[0]), // השתמש בכישור הראשון
+          topic: options.topics[0] || 'général', // השתמש בנושא הראשון או ברירת מחדל
+          difficulty: options.difficulty,
+          template_type: getTemplateType(options.skills[0]),
+          prompt: options.prompt,
+          previous_attempts: progress.slice(-5) // 5 הניסיונות האחרונים
+        })
+      });
+
+      if (response.ok) {
+        const exerciseData = await response.json();
+        console.log('✅ תרגיל נוצר:', exerciseData);
+        
+        // Save exercise to localStorage for the ExercisePage to load
+        const exerciseToSave = {
+          content: exerciseData.content,
+          success: exerciseData.success,
+          level: options.level,
+          skills: options.skills,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('dynamic-exercise', JSON.stringify(exerciseToSave));
+        console.log('💾 תרגיל נשמר ב-localStorage:', exerciseToSave);
+        
+        toast.success('תרגיל נוצר בהצלחה! 🎉', { id: 'creating-exercise' });
+        
+        // סגירת הדיאלוג
+        setShowAdvancedOptions(false);
+        
+        // הפניה לדף התרגיל עם delay קטן
+        setTimeout(() => {
+          window.location.hash = `#/exercise/dynamic/${options.level}`;
+        }, 100);
+      } else {
+        console.error('❌ שגיאה ביצירת תרגיל');
+        toast.error('שגיאה ביצירת התרגיל. נסה שנית.', { id: 'creating-exercise' });
+      }
+    } catch (error) {
+      console.error('❌ שגיאה בבקשה:', error);
+      toast.error('שגיאה בחיבור לשרת. בדוק את החיבור.', { id: 'creating-exercise' });
+    }
   };
 
   const stats = [
@@ -128,6 +224,12 @@ const Dashboard: React.FC = () => {
             </h3>
             <div className="space-y-3">
               <button
+                onClick={handleCreateExercise}
+                className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 font-medium transition-all text-lg shadow-lg"
+              >
+                ✏️ צור תרגיל חדש
+              </button>
+              <button
                 onClick={() => window.location.hash = '#/daily-challenge'}
                 className="w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 font-medium transition-all"
               >
@@ -168,6 +270,16 @@ const Dashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Advanced Exercise Options Modal */}
+      {showAdvancedOptions && (
+        <AdvancedExerciseOptions
+          isOpen={showAdvancedOptions}
+          onClose={() => setShowAdvancedOptions(false)}
+          onCreateExercise={handleExerciseSubmit}
+          currentLevel={selectedLevel}
+        />
+      )}
     </div>
   );
 };

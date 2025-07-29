@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Pause, Volume2, Check, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, Volume2, Check, X, Mic } from 'lucide-react';
 import type { SkillType } from '../types';
 
 interface ExerciseRendererProps {
@@ -13,7 +13,7 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   skillType,
   onComplete
 }) => {
-  const [userAnswers, setUserAnswers] = useState<any>({});
+  const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
   const [showResults, setShowResults] = useState(false);
   const [startTime] = useState(Date.now());
 
@@ -30,11 +30,20 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
     let correct = 0;
     let total = 0;
 
-    if (exercise.questions) {
-      exercise.questions.forEach((q: any, index: number) => {
+    if (exercise.questions || exercise.content?.questions) {
+      const questions = exercise.questions || exercise.content?.questions;
+      questions.forEach((q: any, index: number) => {
         total++;
-        if (userAnswers[`q${index}`] === q.correct) {
-          correct++;
+        if (q.type === 'true_false') {
+          // For true/false questions, compare boolean values
+          if (userAnswers[`q${index}`] === q.correct) {
+            correct++;
+          }
+        } else {
+          // For multiple choice questions, compare indices
+          if (userAnswers[`q${index}`] === q.correct) {
+            correct++;
+          }
         }
       });
     }
@@ -57,46 +66,194 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
       });
     }
 
+    // Handle grammar completion exercises
+    if (exercise.content?.exercise_type === 'grammaire' && exercise.content?.answers) {
+      const answers = exercise.content.answers;
+      const questions = exercise.content?.exercise_content?.questions;
+      
+      if (questions) {
+        questions.forEach((_: any, index: number) => {
+          total++;
+          const questionKey = String(index + 1);
+          if (userAnswers[`completion${index}`] === answers[questionKey]) {
+            correct++;
+          }
+        });
+      }
+    }
+
     return total > 0 ? (correct / total) * 100 : 0;
   };
 
-  const renderReadingExercise = () => (
-    <div className="space-y-6">
-      <div className="bg-gray-50 p-6 rounded-lg">
-        <h3 className="text-lg font-semibold mb-4">Texte à lire</h3>
-        <p className="text-gray-800 leading-relaxed">{exercise.passage}</p>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Questions</h3>
-        {exercise.questions?.map((question: any, index: number) => (
-          <div key={index} className="bg-white p-4 border border-gray-200 rounded-lg">
-            <p className="font-medium mb-3">{question.question}</p>
-            <div className="space-y-2">
-              {question.options.map((option: string, optIndex: number) => (
-                <label key={optIndex} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`q${index}`}
-                    value={optIndex}
-                    onChange={(e) => setUserAnswers(prev => ({
-                      ...prev,
-                      [`q${index}`]: parseInt(e.target.value)
-                    }))}
-                    disabled={showResults}
-                    className="text-blue-600"
-                  />
-                  <span className={showResults && question.correct === optIndex ? 'text-green-600 font-medium' : ''}>{option}</span>
-                  {showResults && question.correct === optIndex && <Check className="w-4 h-4 text-green-600" />}
-                  {showResults && userAnswers[`q${index}`] === optIndex && question.correct !== optIndex && <X className="w-4 h-4 text-red-600" />}
-                </label>
-              ))}
-            </div>
+  const renderGrammarCompletionExercise = () => {
+    const text = exercise.content?.content?.text || exercise.content?.exercise_content?.text;
+    const correctAnswers = exercise.content?.answers;
+    const questions = exercise.content?.exercise_content?.questions;
+    
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4">תרגיל דקדוק</h3>
+          <div className="text-gray-800 leading-relaxed whitespace-pre-line">
+            {text}
           </div>
-        ))}
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">השלמו את המשפטים</h3>
+          {questions && questions.map((questionObj: any, index: number) => {
+            const options = ['le', 'la', "l'", 'les', 'un', 'une', 'des']; // Extended options
+            const questionKey = String(index + 1);
+            return (
+              <div key={index} className="bg-white p-4 border border-gray-200 rounded-lg">
+                <p className="font-medium mb-2 text-blue-600">{questionObj.question_in_Hebrew}</p>
+                <p className="font-medium mb-3">{questionObj.sentence}</p>
+                <div className="space-y-2">
+                  {options.map((option: string, optIndex: number) => (
+                    <label key={optIndex} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name={`completion${index}`}
+                        value={option}
+                        onChange={(e) => setUserAnswers(prev => ({
+                          ...prev,
+                          [`completion${index}`]: e.target.value
+                        }))}
+                        disabled={showResults}
+                        className="text-blue-600"
+                      />
+                      <span className={showResults && correctAnswers?.[questionKey] === option ? 'text-green-600 font-medium' : ''}>{option}</span>
+                      {showResults && correctAnswers?.[questionKey] === option && <Check className="w-4 h-4 text-green-600" />}
+                      {showResults && userAnswers[`completion${index}`] === option && correctAnswers?.[questionKey] !== option && <X className="w-4 h-4 text-red-600" />}
+                    </label>
+                  ))}
+                </div>
+                {showResults && (
+                  <p className="mt-2 text-sm text-green-600">
+                    תשובה נכונה: {correctAnswers?.[questionKey]}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  const renderReadingExercise = () => {
+    // Try different possible structures for dynamic exercises
+    const text = exercise.passage || 
+                 exercise.content?.text || 
+                 exercise.text || 
+                 exercise.content?.passage ||
+                 exercise.content?.content?.text ||  // For old grammar exercises
+                 exercise.content?.exercise_content?.text;  // For new grammar exercises
+    
+    const questions = exercise.questions || 
+                     exercise.content?.questions ||
+                     exercise.content?.content?.questions ||  // For old grammar exercises
+                     exercise.content?.exercise_content?.questions;  // For new grammar exercises
+
+    // Check if this is a grammar completion exercise
+    const isGrammarCompletion = exercise.content?.exercise_type === 'grammaire' && 
+                               exercise.content?.answers && 
+                               (Array.isArray(exercise.content.answers) || typeof exercise.content.answers === 'object');
+    
+    if (isGrammarCompletion) {
+      return renderGrammarCompletionExercise();
+    }
+    
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4">Texte à lire</h3>
+          {text ? (
+            <p className="text-gray-800 leading-relaxed">{text}</p>
+          ) : (
+            <div>
+              <p className="text-red-500">טקסט לא נמצא - מבנה תרגיל לא מזוהה</p>
+              <pre className="text-xs bg-gray-100 p-2 mt-2 overflow-auto">{JSON.stringify(exercise, null, 2)}</pre>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Questions</h3>
+          {questions && Array.isArray(questions) && questions.length > 0 ? (
+            questions.map((question: any, index: number) => (
+              <div key={index} className="bg-white p-4 border border-gray-200 rounded-lg">
+                <p className="font-medium mb-3">{question.question}</p>
+                <div className="space-y-2">
+                  {question.type === 'true_false' ? (
+                    // True/False question
+                    <>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={`q${index}`}
+                          value="true"
+                          onChange={(e) => setUserAnswers(prev => ({
+                            ...prev,
+                            [`q${index}`]: e.target.value === 'true'
+                          }))}
+                          disabled={showResults}
+                          className="text-blue-600"
+                        />
+                        <span className={showResults && question.correct === true ? 'text-green-600 font-medium' : ''}>נכון</span>
+                        {showResults && question.correct === true && <Check className="w-4 h-4 text-green-600" />}
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={`q${index}`}
+                          value="false"
+                          onChange={(e) => setUserAnswers(prev => ({
+                            ...prev,
+                            [`q${index}`]: e.target.value === 'true'
+                          }))}
+                          disabled={showResults}
+                          className="text-blue-600"
+                        />
+                        <span className={showResults && question.correct === false ? 'text-green-600 font-medium' : ''}>לא נכון</span>
+                        {showResults && question.correct === false && <Check className="w-4 h-4 text-green-600" />}
+                      </label>
+                    </>
+                  ) : (
+                    // Multiple choice question
+                    question.options && Array.isArray(question.options) ? question.options.map((option: string, optIndex: number) => (
+                      <label key={optIndex} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={`q${index}`}
+                          value={optIndex}
+                          onChange={(e) => setUserAnswers(prev => ({
+                            ...prev,
+                            [`q${index}`]: parseInt(e.target.value)
+                          }))}
+                          disabled={showResults}
+                          className="text-blue-600"
+                        />
+                        <span className={showResults && question.correct === optIndex ? 'text-green-600 font-medium' : ''}>{option}</span>
+                        {showResults && question.correct === optIndex && <Check className="w-4 h-4 text-green-600" />}
+                        {showResults && userAnswers[`q${index}`] === optIndex && question.correct !== optIndex && <X className="w-4 h-4 text-red-600" />}
+                      </label>
+                    )) : <p className="text-red-500">אפשרויות שאלה לא נמצאו</p>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div>
+              <p className="text-red-500">שאלות לא נמצאו - מבנה תרגיל לא מזוהה</p>
+              <p className="text-sm text-gray-600 mt-2">מבנה התרגיל הנוכחי:</p>
+              <pre className="text-xs bg-gray-100 p-2 mt-2 overflow-auto max-h-40">{JSON.stringify(exercise, null, 2)}</pre>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderListeningExercise = () => (
     <div className="space-y-6">
@@ -293,6 +450,20 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
   const renderExercise = () => {
     if (!exercise) return <div>Chargement de l'exercice...</div>;
 
+    // Handle dynamic exercises - try to detect type from exercise structure
+    if (exercise.isDynamic || !skillType) {
+      // If exercise has 'content' and 'questions', treat as reading
+      if (exercise.content && exercise.questions) {
+        return renderReadingExercise();
+      }
+      // If exercise has 'exercises' array, treat as vocabulary/grammar
+      if (exercise.exercises) {
+        return renderVocabularyExercise();
+      }
+      // Default fallback
+      return renderReadingExercise();
+    }
+
     switch (skillType) {
       case 'reading':
         return renderReadingExercise();
@@ -307,7 +478,7 @@ const ExerciseRenderer: React.FC<ExerciseRendererProps> = ({
       case 'speaking':
         return renderSpeakingExercise();
       default:
-        return <div>Type d'exercice non reconnu</div>;
+        return renderReadingExercise(); // Default to reading instead of error
     }
   };
 

@@ -1,5 +1,11 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+
 from services.dialogue import generate_dialogue
 from services.audio import generate_audio
 from services.exercise_generator import generate_exercise
@@ -135,4 +141,4 @@ def health():
     return jsonify({"status": "healthy", "message": "Server is running"})
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5050)
+    app.run(debug=True, port=5051)
